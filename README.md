@@ -116,7 +116,8 @@ n8n-to-skill/
 ├── evals/                      # 触发用例（5 正 / 5 负 / 3 边界）
 └── examples/
     ├── example-input.json      # 示例输入：亚马逊评论分析 workflow
-    └── example-output/         # 转换产物示例：amazon-review-analyzer
+    └── example-output/
+        └── amazon-review-analyzer/  # 转换产物（SKILL.md + 脚本 + CASE_STUDY.md 完整转换解剖）
 ```
 
 ---
@@ -152,6 +153,7 @@ WorkflowIR（节点 / 连接 / 凭证 / 表达式）
 - **产物**：`amazon-review-analyzer` Skill（本地 CSV 版）
 - **收敛**：原始 18 节点 → 4 个核心能力（读 CSV / 22 维打标 / 统计 / 6 章洞察）
 - **效果**：Gemini API key 和 Google Sheets OAuth 凭证全部消化（改用 Claude 原生 + 本地 CSV），Skill 零凭证依赖
+- **完整解剖**：见 `amazon-review-analyzer/CASE_STUDY.md`（18 节点拓扑 + 节点→能力收敛推演 + 目标对等验收）
 
 ---
 
