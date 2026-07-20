@@ -1,8 +1,11 @@
 <div align="center">
     
-# n8n-to-skill 🔄
+<img width="1983" height="793" alt="ChatGPT Image 2026年7月20日 18_26_39" src="https://github.com/user-attachments/assets/7464db58-ac7b-4b6e-b0bc-f5bf513a900a" />
 
-**把任意 n8n 工作流，目标对等地重写成实现同业务目标的 Agent Skill **
+    
+# n8n-to-skill 
+
+**把任意 n8n 工作流，目标对等地重写成实现同业务目标的 Agent Skill**
 
 **想了解更多最新 AI 行业动态，AI+电商/广告的行业实践方法，人与 AI 如何协作共生的思考，请关注公众号：【新西楼.AI】**
 
