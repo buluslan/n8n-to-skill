@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-black.svg)]()
 [![n8n](https://img.shields.io/badge/n8n-workflow-FF6D5A.svg)](https://n8n.io)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-7C3AED.svg)](https://claude.com/claude-code)
+[![Agent Skill](https://img.shields.io/badge/Agent-Skill-7C3AED.svg)]()
 
 **目标对等重写 | 不调用原 workflow | 符合 skill-creator 规范 | 凭证零泄漏**
 
@@ -23,11 +23,11 @@
 
 ## 项目简介
 
-n8n-to-skill 是一个 Claude Code 元 Skill（meta-skill）：吃进一个 n8n 工作流导出的 JSON，理解它**在干什么**，产出一个能独立达成同业务目标、符合 skill-creator 规范的 Skill 目录。
+n8n-to-skill 是一个 Agent 元 Skill（meta-skill）：吃进一个 n8n 工作流导出的 JSON，理解它**在干什么**，产出一个能独立达成同业务目标、符合 skill-creator 规范的 Agent Skill 目录。
 
-**与"让 Skill 调用 n8n API"的封装方案不同**——n8n-to-skill 做的是**目标对等重写**：产出的 Skill 用 LLM + 脚本 + 工具以原生方式重新实现业务逻辑，转换后 n8n 可以下线，不再依赖。
+**与"让 Skill 调用 n8n API"的封装方案不同**——n8n-to-skill 做的是**目标对等重写**：产出的 Skill 用 LLM + 脚本 + 工具以原生方式重新实现业务逻辑，是 Agent 能直接调用的独立能力。
 
-**适用场景**：你有大量 n8n 工作流沉淀，想把它们变成可被 AI Agent 直接调用、脱离 n8n 运行时的 Skill。
+**适用场景**：你有大量 n8n 工作流沉淀，想把它们变成 Agent 可直接调用的原生 Skill。
 
 > English: [README_EN.md](README_EN.md)
 
@@ -51,7 +51,7 @@ n8n-to-skill 是一个 Claude Code 元 Skill（meta-skill）：吃进一个 n8n 
 
 | 特性 | 说明 |
 |------|------|
-| 🎯 目标对等重写 | 理解业务目标后重新实现，n8n 可下线，不调用原 workflow |
+| 🎯 目标对等重写 | 理解业务目标后用 Agent 原生能力重新实现，不调用原 workflow |
 | 📋 节点行为分类 | 把 n8n 节点按业务贡献分类（触发/AI/数据转换/存储协作等），非逐节点翻译 |
 | 🔄 5 步转换流程 | Parse 解析 → Understand 理解 → Ask 反问 → Plan&Build 构建 → Verify 验收 |
 | ✅ 目标对等验收 | 同输入双跑比对，业务结果对等才算转换成功 |
@@ -64,12 +64,12 @@ n8n-to-skill 是一个 Claude Code 元 Skill（meta-skill）：吃进一个 n8n 
 
 ### 前置要求
 
-- [Claude Code](https://claude.com/claude-code) 已安装
+- 任意支持 Skill 的 AI Agent（Claude Code / OpenClaw / Cursor / Windsurf 等均可）
 - 一个 n8n 工作流导出的 JSON 文件
 
 ### 安装
 
-把 `n8n-to-skill` 复制到 Claude Code 的 skills 目录：
+把 `n8n-to-skill` 复制到你的 Agent 的 skills 目录（以 Claude Code 为例）：
 
 ```bash
 git clone https://github.com/buluslan/n8n-to-skill.git
@@ -78,7 +78,7 @@ cp -r n8n-to-skill ~/.claude/skills/
 
 ### 使用
 
-在 Claude Code 里，描述你的需求：
+在你的 Agent 里，描述你的需求：
 
 ```
 把这个 n8n 工作流转成 skill：/path/to/your-workflow.json
@@ -90,7 +90,7 @@ cp -r n8n-to-skill ~/.claude/skills/
 分析这个 n8n workflow 并生成 skill
 ```
 
-Claude Code 会自动触发 n8n-to-skill，走 5 步流程产出合规 Skill 目录。
+Agent 会自动触发 n8n-to-skill，走 5 步流程产出合规 Skill 目录。
 
 ---
 
@@ -152,14 +152,16 @@ WorkflowIR（节点 / 连接 / 凭证 / 表达式）
 
 ---
 
-## 与"封装方案"的区别
+## 与"逐节点翻译"的区别
 
-| 维度 | 封装方案（调 n8n API） | n8n-to-skill（目标对等重写） |
-|------|----------------------|----------------------------|
-| n8n 依赖 | 必须保持运行 | 可以下线 |
-| 实现方式 | Skill 调用 n8n REST API | Skill 用 LLM/脚本原生实现 |
-| 行为漂移 | 无（同一套代码） | 靠目标对等验收防漂移 |
-| 适用 | 强可审计高频场景 | 业务目标明确的可复用流程 |
+n8n-to-skill 不是把 n8n 节点 1:1 翻译成 Skill 步骤，而是理解业务目标后用 Agent 原生方式重新实现：
+
+| 维度 | 逐节点翻译 | n8n-to-skill（目标对等重写） |
+|------|-----------|------------------------------|
+| 对齐对象 | 节点结构（1:1 映射） | 业务目标（N 节点 → M 能力，M ≪ N） |
+| 产物形态 | 臃肿僵硬，照搬 n8n 概念 | 原生简洁，Agent 友好 |
+| 凭证处理 | 照搬原 workflow 依赖 | 自动剥离，零泄漏 |
+| 验收标准 | 结构相似 | 业务结果对等（同输入双跑比对） |
 
 ---
 
@@ -169,9 +171,9 @@ WorkflowIR（节点 / 连接 / 凭证 / 表达式）
 
 ## 联系方式
 
-**Buluu@新西楼**
+**bulus lan**
 
-- **公众号**：新西楼 — AI+电商/广告行业实践，人与 AI 协作思考
+- **公众号**：新西楼.AI — AI+电商/广告行业实践，人与 AI 协作思考
 - **GitHub Issues**：https://github.com/buluslan/n8n-to-skill/issues
 
 ---

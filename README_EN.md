@@ -1,19 +1,23 @@
+<div align="center">
+
 # n8n-to-skill 🔄
 
-**Rewrite any n8n workflow into a Claude Code Skill that achieves the same business goal — n8n can be retired after conversion.**
+**Rewrite any n8n workflow into an Agent Skill that achieves the same business goal.**
 
-**For the latest AI industry insights, AI + e-commerce/advertising practices, and thoughts on human-AI collaboration, follow 【新西楼 / XinxiLou.AI】**
+**For the latest AI industry insights, AI + e-commerce/advertising practices, and thoughts on human-AI collaboration, follow 【新西楼.AI】**
 
-![XinxiLou WeChat](https://github.com/user-attachments/assets/d8f068d9-c4f8-46c7-914c-fbcab5d52f2a)
+![XinxiLou.AI WeChat](https://github.com/user-attachments/assets/d8f068d9-c4f8-46c7-914c-fbcab5d52f2a)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0-black.svg)]()
 [![n8n](https://img.shields.io/badge/n8n-workflow-FF6D5A.svg)](https://n8n.io)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-7C3AED.svg)](https://claude.com/claude-code)
+[![Agent Skill](https://img.shields.io/badge/Agent-Skill-7C3AED.svg)]()
 
 **Goal-Parity Rewrite | No Calls to Original Workflow | skill-creator Compliant | Zero Credential Leakage**
 
-**Created By Buluu@新西楼**
+**Created By bulus lan**
+
+</div>
 
 > 中文文档：[README.md](README.md)
 
@@ -21,11 +25,11 @@
 
 ## Overview
 
-n8n-to-skill is a Claude Code meta-skill: feed it an n8n workflow JSON, it understands **what the workflow does**, and produces a self-contained Skill directory that achieves the same business goal and complies with the skill-creator spec.
+n8n-to-skill is an Agent meta-skill: feed it an n8n workflow JSON, it understands **what the workflow does**, and produces a self-contained agent Skill directory that achieves the same business goal and complies with the skill-creator spec.
 
-**Unlike "wrapper" approaches that have the Skill call the n8n API**, n8n-to-skill performs a **goal-parity rewrite**: the output Skill reimplements the business logic natively with LLM + scripts + tools, so n8n can be fully retired afterwards.
+**Unlike "wrapper" approaches that have the Skill call the n8n API**, n8n-to-skill performs a **goal-parity rewrite**: the output Skill reimplements the business logic natively with LLM + scripts + tools, as a standalone capability agents can invoke directly.
 
-**Use case**: You have a library of n8n workflows and want to turn them into Skills that AI agents can invoke directly — without depending on a running n8n instance.
+**Use case**: You have a library of n8n workflows and want to turn them into native Skills that AI agents can invoke directly.
 
 ---
 
@@ -47,7 +51,7 @@ What's aligned is the **business goal and the I/O contract**, not the node struc
 
 | Feature | Description |
 |---------|-------------|
-| 🎯 Goal-Parity Rewrite | Reimplement after understanding the goal; n8n can retire; no calls to the original workflow |
+| 🎯 Goal-Parity Rewrite | Reimplement with agent-native capabilities after understanding the goal; no calls to the original workflow |
 | 📋 Node Behavior Taxonomy | Classify n8n nodes by business contribution (trigger / AI / data-transform / storage, etc.), not a 1:1 translation |
 | 🔄 5-Step Pipeline | Parse → Understand → Ask → Plan & Build → Verify |
 | ✅ Goal-Parity Verification | Run original workflow and new Skill on the same input; pass only when business results are equivalent |
@@ -60,12 +64,12 @@ What's aligned is the **business goal and the I/O contract**, not the node struc
 
 ### Prerequisites
 
-- [Claude Code](https://claude.com/claude-code) installed
+- Any Skill-compatible AI agent (Claude Code / OpenClaw / Cursor / Windsurf, etc.)
 - An n8n workflow exported as JSON
 
 ### Install
 
-Copy `n8n-to-skill` into Claude Code's skills directory:
+Copy `n8n-to-skill` into your agent's skills directory (Claude Code example):
 
 ```bash
 git clone https://github.com/buluslan/n8n-to-skill.git
@@ -74,7 +78,7 @@ cp -r n8n-to-skill ~/.claude/skills/
 
 ### Usage
 
-In Claude Code, describe what you want:
+In your agent, describe what you want:
 
 ```
 Convert this n8n workflow into a skill: /path/to/your-workflow.json
@@ -86,7 +90,7 @@ or:
 Analyze this n8n workflow and generate a skill
 ```
 
-Claude Code auto-triggers n8n-to-skill and runs the 5-step pipeline to produce a compliant Skill.
+The agent auto-triggers n8n-to-skill and runs the 5-step pipeline to produce a compliant Skill.
 
 ---
 
@@ -148,14 +152,16 @@ The repo's `examples/` shows a complete conversion:
 
 ---
 
-## Wrapper Approach vs. n8n-to-skill
+## Node-by-Node Translation vs. n8n-to-skill
 
-| Aspect | Wrapper (call n8n API) | n8n-to-skill (goal-parity rewrite) |
-|--------|------------------------|------------------------------------|
-| n8n dependency | Must stay running | Can be retired |
-| Implementation | Skill calls n8n REST API | Skill uses LLM/scripts natively |
-| Behavior drift | None (same code) | Guarded by goal-parity verification |
-| Best for | High-audit, high-frequency cases | Reusable flows with clear business goals |
+n8n-to-skill does not translate n8n nodes 1:1 into Skill steps. It understands the business goal and reimplements natively:
+
+| Aspect | Node-by-node translation | n8n-to-skill (goal-parity rewrite) |
+|--------|--------------------------|------------------------------------|
+| Aligns with | Node structure (1:1 mapping) | Business goal (N nodes → M capabilities, M ≪ N) |
+| Output | Bloated, rigid, copies n8n concepts | Lean, native, agent-friendly |
+| Credentials | Copies original dependencies | Auto-stripped, zero leakage |
+| Acceptance | Structural similarity | Business-result parity (dual-run on same input) |
 
 ---
 
@@ -165,9 +171,9 @@ The repo's `examples/` shows a complete conversion:
 
 ## Contact
 
-**Buluu@新西楼 (XinxiLou.AI)**
+**bulus lan**
 
-- **WeChat Official Account**: 新西楼 — AI + e-commerce/advertising practices, human-AI collaboration
+- **WeChat Official Account**: 新西楼.AI — AI + e-commerce/advertising practices, human-AI collaboration
 - **GitHub Issues**: https://github.com/buluslan/n8n-to-skill/issues
 
 ---
