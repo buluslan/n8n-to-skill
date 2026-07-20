@@ -1,8 +1,10 @@
+<div align="center">
+    
 # n8n-to-skill 🔄
 
-**把任意 n8n 工作流，目标对等地重写成实现同业务目标的 Claude Code Skill —— 转换后 n8n 可下线。**
+**把任意 n8n 工作流，目标对等地重写成实现同业务目标的 Agent Skill **
 
-**想了解更多最新 AI 行业动态，AI+电商/广告的行业实践方法，人与 AI 如何协作共生的思考，请关注公众号：【新西楼】**
+**想了解更多最新 AI 行业动态，AI+电商/广告的行业实践方法，人与 AI 如何协作共生的思考，请关注公众号：【新西楼.AI】**
 
 ![新西楼公众号](https://github.com/user-attachments/assets/d8f068d9-c4f8-46c7-914c-fbcab5d52f2a)
 
@@ -13,7 +15,7 @@
 
 **目标对等重写 | 不调用原 workflow | 符合 skill-creator 规范 | 凭证零泄漏**
 
-**Created By Buluu@新西楼**
+**Created By buluslan@新西楼.AI**
 
 ---
 
