@@ -1,0 +1,27 @@
+# 凭证 / 环境（绝不入库）
+.env
+*.key
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# 转换时生成的产物（运行时产物，不入库）
+output/
+draft/
+*.draft
+warnings.json
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+*.swp

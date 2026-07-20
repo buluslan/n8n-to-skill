@@ -1,0 +1,101 @@
+{
+  "skill": "n8n-to-skill",
+  "eval_metadata": {
+    "covered": "trigger routing (5 positive + 5 negative + 3 near-miss)",
+    "last_updated": "2026-07-20",
+    "runner": "agent-judge"
+  },
+  "cases": [
+    {
+      "id": 1,
+      "input": "把这个 n8n 工作流转成 skill",
+      "expected": "trigger",
+      "category": "positive",
+      "reason": "用户意图是把现有 n8n workflow 目标对等地重写成 Claude Code skill，正中 description 的核心触发词"
+    },
+    {
+      "id": 2,
+      "input": "把这个 flow 抽象成可复用能力",
+      "expected": "trigger",
+      "category": "positive",
+      "reason": "「抽象成可复用能力」语义等价于元 skill 的职责——把工作流收敛成 skill 能力，触发词命中"
+    },
+    {
+      "id": 3,
+      "input": "分析这个 n8n workflow 并生成 skill",
+      "expected": "trigger",
+      "category": "positive",
+      "reason": "明确以 n8n workflow 为输入、以生成 skill 为输出，分析+生成双动词命中 description 的触发意图"
+    },
+    {
+      "id": 4,
+      "input": "把 n8n 模板变成 Claude skill",
+      "expected": "trigger",
+      "category": "positive",
+      "reason": "n8n 模板即 workflow 实例，「变成 Claude skill」即目标对等重写，触发词全中"
+    },
+    {
+      "id": 5,
+      "input": "n8n 转 skill",
+      "expected": "trigger",
+      "category": "positive",
+      "reason": "n8n 与 skill 同时出现且动词是「转」，命中 description 触发词原话「n8n 转 skill」"
+    },
+    {
+      "id": 6,
+      "input": "从零写一个 n8n 工作流",
+      "expected": "skip",
+      "category": "negative",
+      "reason": "意图是新建 n8n workflow 而非把它转成 skill，方向相反——应路由到 n8n-workflow-pattern / n8n-node-configuration"
+    },
+    {
+      "id": 7,
+      "input": "调试 n8n 节点报错",
+      "expected": "skip",
+      "category": "negative",
+      "reason": "目标是在 n8n 内部排查节点错误，不涉及转 skill，应路由到 n8n-validation-expert / systematic-debugging"
+    },
+    {
+      "id": 8,
+      "input": "让 skill 调用 n8n API",
+      "expected": "skip",
+      "category": "negative",
+      "reason": "把 n8n 当作外部依赖去调用，与本 skill 的核心理念（n8n 可下线、绝不调用原 workflow）直接冲突"
+    },
+    {
+      "id": 9,
+      "input": "写 n8n 节点配置规则",
+      "expected": "skip",
+      "category": "negative",
+      "reason": "产出物是 n8n 节点配置说明，不是 Claude skill，应路由到 n8n-node-configuration"
+    },
+    {
+      "id": 10,
+      "input": "部署 n8n 到服务器",
+      "expected": "skip",
+      "category": "negative",
+      "reason": "意图是部署 n8n 平台本身，与转 skill 无关，应路由到 setup-deploy / land-and-deploy"
+    },
+    {
+      "id": 11,
+      "input": "把 n8n 工作流导出成 JSON",
+      "expected": "skip",
+      "category": "near-miss",
+      "reason": "边界：n8n 与 workflow 都出现了，但动词是「导出」而非「重写/转换」——产出的 JSON 是 workflow 快照不是 skill，目标不对等，不触发"
+    },
+    {
+      "id": 12,
+      "input": "学习这个 n8n 工作流的逻辑",
+      "expected": "skip",
+      "category": "near-miss",
+      "reason": "边界：用户接触了 workflow，但意图是理解而非产出 skill——产出物是认知不是代码，目标不对等，不触发"
+    },
+    {
+      "id": 13,
+      "input": "把 zapier 工作流重写成 skill",
+      "expected": "skip",
+      "category": "near-miss",
+      "reason": "边界：平台是 zapier 不是 n8n，虽然意图（重写成 skill）与本 skill 高度一致——本 skill 的节点分类、parse_workflow.py 仅针对 n8n 格式，暂不覆盖 zapier；如需扩展需先建 zapier 节点映射表"
+    }
+  ]
+}

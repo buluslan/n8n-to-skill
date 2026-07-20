@@ -1,0 +1,648 @@
+{
+  "updatedAt": "2026-02-24T12:17:25.223Z",
+  "createdAt": "2026-02-19T06:27:05.618Z",
+  "id": "YOUR_WORKFLOW_ID",
+  "name": "亚马逊商品评论深度分析工作流-V1.0-Created By Buluu@新西楼",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "亚马逊商品评论AI深度分析工作流 \nCreated By Buluu@新西楼",
+        "formDescription": "1.请输入要分析的评论条数，工作流会提取前X行进行分析\n2.本工作流依据【卖家精灵】导出的商品评论文件为默认模板进行设计，建议不要改动表格中任何内容。",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "分析评论条数",
+              "fieldType": "number",
+              "placeholder": "输入数字，如 10、50、100，初次使用建议不超过10条进行测试。",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "form-trigger",
+      "name": "表单触发",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "YOUR_SHEET_NAME"
+        },
+        "options": {}
+      },
+      "id": "read-sheet",
+      "name": "读取评论数据",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// V10.7: 验证 + 去重 + 用户指定条数\nconst items = $input.all();\n// P0-11: 限制1-500\nconst userLimit = parseInt($('表单触发').first().json['分析条数']) || 10;\n\nif (!items || items.length === 0) {\n  throw new Error('工作表为空');\n}\n\nconst toProcess = [];\nlet skipped = 0;\nlet emptyRows = 0;\n\nfor (let i = 0; i < items.length; i++) {\n  const d = items[i].json;\n  const content = d['内容'] || d['content'] || '';\n  if (!content || !content.trim()) { emptyRows++; continue; }\n  if (d['人群_性别'] && String(d['人群_性别']).trim()) { skipped++; continue; }\n  items[i].json._rowIndex = i + 2;\n  toProcess.push(items[i]);\n}\n\nconst willProcess = Math.min(toProcess.length, userLimit);\nconsole.log('总行数: ' + items.length + ', 空行: ' + emptyRows + ', 已打标: ' + skipped + ', 待处理: ' + toProcess.length + ', 用户指定: ' + userLimit + ', 本次处理: ' + willProcess);\n\nif (toProcess.length === 0) return [];\nreturn toProcess.slice(0, willProcess);"
+      },
+      "id": "validate-data",
+      "name": "验证数据",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-comments",
+      "name": "循环处理评论",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        848,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": "models/gemini-3-flash-preview",
+        "messages": {
+          "values": [
+            {
+              "content": "=你是一个专业电商评论分析AI。请分析以下亚马逊评论，提取20个维度的标签。\n\n【评论标题】：{{ $json['标题(翻译)'] || $json['标题'] || '' }}\n【评论内容】：{{ $json['内容(翻译)'] || $json['内容'] || '' }}\n【星级】：{{ $json['星级'] || '' }}\n【VP评论】：{{ $json['VP评论'] || '' }}\n\n严格按以下JSON格式返回（不要markdown代码块，不要其他文字）：\n{\n  \"人群_性别\": \"男性/女性/不明\",\n  \"人群_年龄段\": \"18-25/26-35/36-45/46-55/55+/不明\",\n  \"人群_职业\": \"根据评论内容确定具体职业身份，比如医疗工作者/体力劳动者/办公室职员/学生/退休人员/其他/不明\",\n  \"人群_购买角色\": \"自用/礼物/商用/不明\",\n  \"场景_使用场景\": \"家用/办公/户外/运动/开车/其他\",\n  \"功能_满意度\": \"超出预期/符合预期/低于预期/未提及\",\n  \"功能_具体功能\": \"简述功能点或未提及\",\n  \"质量_材质\": \"优秀/良好/一般/差/未提及\",\n  \"质量_做工\": \"精细/一般/粗糙/未提及\",\n  \"质量_耐用性\": \"耐用/一般/易坏/未提及\",\n  \"服务_发货速度\": \"快/正常/慢/未提及\",\n  \"服务_包装质量\": \"完好/一般/破损/未提及\",\n  \"服务_客服响应\": \"及时/一般/迟缓/未提及\",\n  \"服务_退换货\": \"顺畅/一般/困难/未提及\",\n  \"服务_保修\": \"有保修/无保修/未提及\",\n  \"体验_舒适度\": \"舒适/一般/不适/未提及\",\n  \"体验_易用性\": \"简单/适中/困难/未提及\",\n  \"体验_外观设计\": \"满意/一般/不满意/未提及\",\n  \"体验_价格感知\": \"超值/合理/偏贵/未提及\",\n  \"竞品_竞品对比\": \"提及的竞品品牌名/无\",\n  \"复购_复购意愿\": \"会复购/可能/不会/未提及\",\n  \"情感_总体评价\": \"强烈推荐/推荐/中立/不推荐/强烈不推荐\"\n}\n\n注意：无依据的填\"不明\"或\"未提及\"。只返回纯JSON。"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gemini-tagging",
+      "name": "Gemini评论打标",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        400
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconst originalData = $('循环处理评论').first().json;\n\n// Gemini输出结构: {content: {parts: [{text: \"...\"}]}, finishReason: \"STOP\"}\nlet aiText = '';\nif (item.content && item.content.parts && item.content.parts[0]) {\n  aiText = item.content.parts[0].text || '';\n} else if (item.text) {\n  aiText = item.text;\n} else if (item.output) {\n  aiText = item.output;\n} else {\n  aiText = JSON.stringify(item);\n}\n\n// 清理markdown标记\naiText = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\n// 20个字段的默认值\nconst ALL_FIELDS = [\n  '人群_性别',\n  '人群_年龄段',\n  '人群_职业',\n  '人群_购买角色',\n  '场景_使用场景',\n  '功能_满意度',\n  '功能_具体功能',\n  '质量_材质',\n  '质量_做工',\n  '质量_耐用性',\n  '服务_发货速度',\n  '服务_包装质量',\n  '服务_客服响应',\n  '服务_退换货',\n  '服务_保修',\n  '体验_舒适度',\n  '体验_易用性',\n  '体验_外观设计',\n  '体验_价格感知',\n  '竞品_竞品对比',\n  '复购_复购意愿',\n  '情感_总体评价'\n];\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(aiText);\n} catch(e) {\n  const match = aiText.match(/\\{[\\s\\S]*\\}/);\n  if (match) {\n    try { parsed = JSON.parse(match[0]); } catch(e2) {}\n  }\n}\n\n// 确保所有字段存在\nALL_FIELDS.forEach(key => {\n  if (!parsed[key]) parsed[key] = '未提及';\n});\n\nconst result = {...originalData, ...parsed};\nreturn [{json: result}];\n"
+      },
+      "id": "parse-ai",
+      "name": "解析AI结果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/YOUR_SPREADSHEET_ID/values/工作表1!V{{ $json['_rowIndex'] }}:AQ{{ $json['_rowIndex'] }}?valueInputOption=USER_ENTERED",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"values\": [[\"{{ $json['人群_性别'] || '未提及' }}\",\"{{ $json['人群_年龄段'] || '未提及' }}\",\"{{ $json['人群_职业'] || '未提及' }}\",\"{{ $json['人群_购买角色'] || '未提及' }}\",\"{{ $json['场景_使用场景'] || '未提及' }}\",\"{{ $json['功能_满意度'] || '未提及' }}\",\"{{ $json['功能_具体功能'] || '未提及' }}\",\"{{ $json['质量_材质'] || '未提及' }}\",\"{{ $json['质量_做工'] || '未提及' }}\",\"{{ $json['质量_耐用性'] || '未提及' }}\",\"{{ $json['服务_发货速度'] || '未提及' }}\",\"{{ $json['服务_包装质量'] || '未提及' }}\",\"{{ $json['服务_客服响应'] || '未提及' }}\",\"{{ $json['服务_退换货'] || '未提及' }}\",\"{{ $json['服务_保修'] || '未提及' }}\",\"{{ $json['体验_舒适度'] || '未提及' }}\",\"{{ $json['体验_易用性'] || '未提及' }}\",\"{{ $json['体验_外观设计'] || '未提及' }}\",\"{{ $json['体验_价格感知'] || '未提及' }}\",\"{{ $json['竞品_竞品对比'] || '未提及' }}\",\"{{ $json['复购_复购意愿'] || '未提及' }}\",\"{{ $json['情感_总体评价'] || '未提及' }}\"]]}",
+        "options": {}
+      },
+      "id": "update-row",
+      "name": "写回打标结果",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "YOUR_SHEET_NAME"
+        },
+        "options": {}
+      },
+      "id": "read-all-tagged",
+      "name": "读取所有已打标数据",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        208
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst allItems = $input.all();\n\nconst fields = ['人群_性别','人群_年龄段','人群_职业','人群_购买角色','场景_使用场景','功能_满意度','功能_具体功能','质量_材质','质量_做工','质量_耐用性','服务_发货速度','服务_包装质量','服务_客服响应','服务_退换货','服务_保修','体验_舒适度','体验_易用性','体验_外观设计','体验_价格感知','竞品_竞品对比','复购_复购意愿','情感_总体评价'];\n\nconst validItems = [];\nconst groupPositive = []; // 正面：强烈推荐、推荐\nconst groupNegative = []; // 负面：强烈不推荐、不推荐、一般\n\n// 辅助函数：计算分数\nfunction calculateScore(json) {\n  let validCount = 0;\n  let score = 0;\n  \n  for (const field of fields) {\n    const val = json[field];\n    if (val && val !== '未提及' && val !== '解析失败' && val !== '') {\n      validCount++;\n      score += 1;\n      \n      // 关键维度加分\n      if (field === '竞品_竞品对比') score += 5;\n      if (field === '复购_复购意愿') score += 3;\n      if (field === '场景_使用场景') score += 2;\n    }\n  }\n  \n  const content = json['内容'] || '';\n  if (content.length > 50) score += 1;\n  if (content.length > 200) score += 2;\n  \n  return { score, validCount, content, title: json['标题'], rating: json['星级'], sentiment: json['情感_总体评价'] };\n}\n\nfor (const row of allItems) {\n  const json = row.json;\n  \n  // 必须有内容\n  if (!json['内容']) continue;\n\n  const info = calculateScore(json);\n  \n  // 必须至少有3个有效标签才算“有效样本”\n  if (info.validCount < 3) continue;\n  \n  validItems.push(row); // 这个用于统计总数\n  \n  const itemData = {\n    // 原始信息\n    title: info.title || '',\n    content: info.content,\n    rating: info.rating || '',\n    sentiment: info.sentiment || '未分类',\n    // 评分详情\n    stats: {\n      density_score: info.score,\n      valid_tags: info.validCount\n    }\n  };\n\n  // 分组\n  const s = info.sentiment;\n  if (s === '强烈推荐' || s === '推荐') {\n    groupPositive.push(itemData);\n  } else {\n    // 包括 一般、不推荐、强烈不推荐，以及可能的空值归为负面关注区\n    groupNegative.push(itemData);\n  }\n}\n\n// 统计逻辑 (保持不变)\nconst total = allItems.length;\nconst tagged = validItems.length; // 这里其实 validItems 只是筛选过的，真实的 tagged 可能是 allItems 里 filter 过的\n// 修正 tagged 统计：应该统计所有有数据的行，不仅仅是高质量行\n// 之前的代码逻辑是遍历一遍。这里为了保持统计准确性，我们应该分开处理。\n// 但为了代码简洁，且 total/tagged 只是给 AI 参考，误差一点没关系。\n// 我们恢复一下严谨的 counting：\nlet realTaggedCount = 0;\nconst finalStats = {};\nfor (const field of fields) finalStats[field] = {};\n\nfor (const row of allItems) {\n    let hasTag = false;\n    for (const field of fields) {\n        const val = row.json[field];\n        if (val && val !== '未提及' && val !== '') {\n            finalStats[field][val] = (finalStats[field][val] || 0) + 1;\n            hasTag = true;\n        }\n    }\n    if (hasTag) realTaggedCount++;\n}\n\n// 排序并截取\ngroupPositive.sort((a, b) => b.stats.density_score - a.stats.density_score);\ngroupNegative.sort((a, b) => b.stats.density_score - a.stats.density_score);\n\n// 各取 Top 3\nconst topPos = groupPositive.slice(0, 3).map((item, i) => ({ type: '正面高价值', rank: i+1, ...item }));\nconst topNeg = groupNegative.slice(0, 3).map((item, i) => ({ type: '负面/一般高价值', rank: i+1, ...item }));\n\nconst finalSamples = [...topPos, ...topNeg];\n\nif (finalSamples.length === 0 && allItems.length > 0) {\n    // 如果没有筛选出高质量的，就随便拿几个兜底\n    finalSamples.push({ content: '无高价值样本，请基于统计数据分析。' });\n}\n\nreturn [{json: { \n  total, \n  tagged: realTaggedCount, \n  fieldStats: finalStats,\n  sampleReviews: finalSamples \n}}];\n"
+      },
+      "id": "stats-analysis",
+      "name": "统计分析",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": "models/gemini-3-flash-preview",
+        "messages": {
+          "values": [
+            {
+              "content": "=# Role / 角色设定\n你是一位拥有15年经验的“消费者行为学家”和“首席跨境电商数据分析师”。你擅长通过处理结构化的标签数据和非结构化的文本内容，挖掘市场真相。你的行文风格专业、客观、逻辑严密。\n\n# Context / 背景\n我将为你提供一组电商产品的评论数据。每一条评论都已经经过人工打标处理，包含了丰富的人群、场景、功能和情感维度信息。\n\n# Input Data Tags / 标签体系说明\n数据中包含以下维度的标签，请熟知：\n1. 人群维度：性别、年龄段、职业、购买角色\n2. 场景维度：使用场景\n3. 产品维度：功能满意度、具体功能\n4. 质量维度：材质、做工、耐用性\n5. 服务维度：发货速度、包装质量、客服响应、退换货、保修\n6. 体验维度：舒适度、易用性、外观设计、价格感知\n7. 市场维度：竞品对比、复购意愿\n8. 情感维度：总体评价\n\n【评论总量】：{{ $json.total }} 条\n【有效打标】：{{ $json.tagged }} 条\n\n【各维度统计】：\n{{ JSON.stringify($json.fieldStats, null, 2) }}\n\n【精选高价值评论样本 (正面+负面 各Top3)】：\n{{ JSON.stringify($json.sampleReviews, null, 2) }}\n\n\n# Task / 任务目标\n请综合分析我提供的数据，生成一份《深度洞察分析报告》。你需要结合“定量分析”（基于标签统计出的占比、频次）和“定性分析”（基于评论原始内容的语义挖掘）来论证你的观点。\n\n# Strict Formatting Rules / 严格格式约束 (Crucial)\n为了保证报告的整洁性，请严格遵守以下格式要求：\n1. 禁止使用任何 Markdown 格式符号（如星号 *、井号 #、下划线 _ 等）。\n2. 禁止使用无意义的斜杠 / 作为分隔符。\n3. 标题不要用加粗或变大，请使用【 】符号包裹来表示层级（例如：【一、用户画像分析】）。\n4. 列表项请使用数字（1. 2. 3.）或简单的连字符（-）。\n5. 引用用户原话时，请使用双引号。\n6. 输出内容必须纯净、文本化，便于直接阅读和复制。\n\n# Analysis Framework / 分析框架\n请严格按照以下6个章节进行输出：\n\n【标题】\n-常规命名格式：关于XX品牌XX产品的评论深度分析报告\n-如果识别不到品牌，可以灵活调整进行删减\n\n【洞察总览】\n本次处理的数据范围（必须包括文档中的评论总数，实际打标的评论数），用2~3句话总结本次评论分析的核心要点（特别是负反馈和产品可优化方向）。\n\n【一、核心用户画像与场景】\n- 定量统计：分析人群性别、年龄段、职业标签的分布比例。\n- 交叉洞察：通过数据关联，找出“职业”与“使用场景”的强相关性（例如：某种职业的人群是否集中在特定场景使用？）。\n- 典型画像：基于数据，用文字描绘出该产品的核心典型用户形象（User Avatar）。\n\n【二、核心卖点与价值验证】\n- 满意度归因：在“功能满意度”为“超出预期”或“总体评价”为“强烈推荐”的数据中，统计出现频率最高的体验或质量标签是什么。\n- 语义挖掘（定性）：深入分析原始评论，用户是用什么具体的词汇来描述这些优点的？找出打动用户的具体细节。\n\n【三、主要痛点与负面归因】\n- 问题分布：在差评数据中，统计占比最高的负面标签（是质量问题多，还是服务问题多？）。\n- 根源追溯（定性）：不要只说“耐用性差”，要根据原始评论指出具体是哪个部件坏了；不要只说“舒适度一般”，要指出具体是哪里造成了不适。\n- 严重性评估：区分哪些是导致退货的致命伤，哪些是用户可以忍受的小瑕疵。\n\n【四、改进建议与优先级】\n- 基于痛点分析，提出3条具体的改进建议。\n- 请按照“问题出现的频率”和“对购买决策的影响程度”进行优先级排序（高/中/低）。\n\n【五、潜在机会与差异化】\n- 竞品情报：分析“竞品对比”标签，用户提到了哪些对手？用户认为我们好在哪里，差在哪里？\n- 蓝海发现：在“职业”或“场景”标签中，是否存在虽属小众但满意度极高的人群？这可能是一个未被充分服务的细分市场。\n\n【六、典型用户深度解析】\n- 请从高价值评论样本数据中提取 1-2 个占比最高或最具代表性的“核心用户画像”。\n- 针对每个画像，抽取 1-2 条评论（必须包含正面和负面评价，保持分布均匀）进行具体解析，最后总共输出不少于4个评论内容的解析。\n- 请在分析时引用上述【精选评论样本】中的具体内容，严格按照以下格式输出本章节内容：\n\n典型画像：[年龄段] [性别] [职业] [核心需求]，如果识别不到以上维度信息，可以根据评论内容进行抽象总结，预测用户身份。\n评价原文：\"[保留评论核心内容，过长可适当截断]\"\n评论解析：[1-2句话简评。指出该用户的核心痛点、爽点或具体建议]\n\n（请重复上述格式以展示所有选取的评论）\n\n【七、关键洞察总结】\n- 请用一段精炼的文字（约150字左右）对整份报告进行总结。\n- 核心聚焦：请基于你的专业判断，指出报告中最值得关注的“亮点”或“风险点”。这应该是一个能够让决策者在30秒内看清产品现状的高价值结论。\n\n# Instruction / 执行指令\n请阅读我接下来提供的数据，并严格按照上述格式规则输出报告。\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gemini-insight",
+      "name": "Gemini洞察分析",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        208
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst data = $input.first().json;\nif (data.empty_result) {\n  return [{json: {insightText: '无有效数据', empty_result: true}}];\n}\n\nlet text = '';\nif (data.content && data.content.parts && data.content.parts[0]) {\n  text = data.content.parts[0].text;\n} else if (data.text) {\n  text = data.text;\n} else if (data.insightText) {\n  text = data.insightText;\n} else {\n  text = 'AI未能生成洞察内容。';\n}\ntext = text.replace(/```json\\n?/gi, '').replace(/```\\n?/g, '').trim();\nreturn [{json: {insightText: text}}];\n"
+      },
+      "id": "prepare-insight",
+      "name": "提取洞察内容",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SPREADSHEET_ID:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"requests\": [{\"addSheet\": {\"properties\": {\"title\": \"洞察报告\"}}}]}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "create-insight-sheet",
+      "name": "创建洞察报告表",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1808,
+        208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "洞察报告"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "报告内容",
+              "displayName": "报告内容",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "生成时间",
+              "displayName": "生成时间",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "write-insight",
+      "name": "写入洞察报告",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2128,
+        208
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SPREADSHEET_ID/values/工作表1!V1:AQ1?valueInputOption=USER_ENTERED",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"values\": [[\"人群_性别\", \"人群_年龄段\", \"人群_职业\", \"人群_购买角色\", \"场景_使用场景\", \"功能_满意度\", \"功能_具体功能\", \"质量_材质\", \"质量_做工\", \"质量_耐用性\", \"服务_发货速度\", \"服务_包装质量\", \"服务_客服响应\", \"服务_退换货\", \"服务_保修\", \"体验_舒适度\", \"体验_易用性\", \"体验_外观设计\", \"体验_价格感知\", \"竞品_竞品对比\", \"复购_复购意愿\", \"情感_总体评价\"]]}",
+        "options": {}
+      },
+      "id": "init-headers",
+      "name": "初始化标签列头",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        352,
+        304
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "=报告内容",
+              "value": "={{ $('提取洞察内容').item.json.insightText }}"
+            },
+            {
+              "name": "生成时间",
+              "value": "={{ new Date().toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai'}) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-write-data",
+      "name": "准备写入数据",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SPREADSHEET_ID?fields=sheets.properties",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "get-sheet-meta",
+      "name": "获取表格元数据",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        368,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst sheets = $input.first().json.sheets;\nconst targetSheet = sheets.find(s => s.properties.title === '工作表1');\nif (!targetSheet) throw new Error('找不到工作表1');\n\nconst currentCount = targetSheet.properties.gridProperties.columnCount || 26;\nconst newCount = Math.max(42, currentCount);\n\nreturn [{\n  json: {\n    sheetId: targetSheet.properties.sheetId,\n    newColumnCount: newCount\n  }\n}];\n"
+      },
+      "id": "extract-sheet-id",
+      "name": "提取SheetId",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SPREADSHEET_ID:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [\n    {\n      \"updateSheetProperties\": {\n        \"properties\": {\n          \"sheetId\": {{ $json.sheetId }},\n          \"gridProperties\": {\n            \"columnCount\": {{ $json.newColumnCount }}\n          }\n        },\n        \"fields\": \"gridProperties.columnCount\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "expand-columns",
+      "name": "扩展列宽至30列",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        768,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "表单触发": {
+      "main": [
+        [
+          {
+            "node": "获取表格元数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "读取评论数据": {
+      "main": [
+        [
+          {
+            "node": "验证数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "验证数据": {
+      "main": [
+        [
+          {
+            "node": "循环处理评论",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "循环处理评论": {
+      "main": [
+        [
+          {
+            "node": "读取所有已打标数据",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gemini评论打标",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini评论打标": {
+      "main": [
+        [
+          {
+            "node": "解析AI结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析AI结果": {
+      "main": [
+        [
+          {
+            "node": "写回打标结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "写回打标结果": {
+      "main": [
+        [
+          {
+            "node": "循环处理评论",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "读取所有已打标数据": {
+      "main": [
+        [
+          {
+            "node": "统计分析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "统计分析": {
+      "main": [
+        [
+          {
+            "node": "Gemini洞察分析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini洞察分析": {
+      "main": [
+        [
+          {
+            "node": "提取洞察内容",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取洞察内容": {
+      "main": [
+        [
+          {
+            "node": "创建洞察报告表",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "创建洞察报告表": {
+      "main": [
+        [
+          {
+            "node": "准备写入数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "写入洞察报告": {
+      "main": [
+        []
+      ]
+    },
+    "初始化标签列头": {
+      "main": [
+        [
+          {
+            "node": "读取评论数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "准备写入数据": {
+      "main": [
+        [
+          {
+            "node": "写入洞察报告",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取表格元数据": {
+      "main": [
+        [
+          {
+            "node": "提取SheetId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取SheetId": {
+      "main": [
+        [
+          {
+            "node": "扩展列宽至30列",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "扩展列宽至30列": {
+      "main": [
+        [
+          {
+            "node": "初始化标签列头",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {},
+  "pinData": {},
+  "tags": []
+}
