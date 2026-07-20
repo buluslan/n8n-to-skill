@@ -3,6 +3,7 @@ name: n8n-to-skill
 description: 把已经做好的 n8n 工作流（导出的 JSON / workflow URL / 模板）理解后，重新实现成一个能独立达成同业务目标、符合 skill-creator 规范的 Claude Code skill（转换后 n8n 可下线，不依赖调用原 workflow）。当用户说"把这个 n8n 工作流重写成 skill / 把这个 flow 抽象成可复用能力 / 分析这个 n8n workflow 并生成 skill / 把 n8n 模板变成 Claude skill / n8n 转 skill"时，必须使用本 skill。不要用于"从零写一个 n8n 工作流"或"调试 n8n 节点报错"或"让 skill 调用 n8n"——那是 n8n 构建类 skill 或封装方案的职责。
 allowed-tools: Read, Glob, Grep, Bash(python3:*), Bash(python:*), Write, Edit
 license: MIT
+version: 0.1.0
 ---
 
 # n8n-to-skill
@@ -23,7 +24,7 @@ license: MIT
 
 **一句话原则：读懂 workflow 在干什么，不翻译它是怎么干的。**
 
-> 例：评论分析 workflow 用 8 个节点伺候 Google Sheets（读/写/建表/改列宽/取元数据）。目标对等重写成"本地 CSV"实现时，这 8 个节点收敛成 2-3 个文件操作——因为业务目标是"存取评论和报告"，本地文件用更简单的方式等价达成。详见 `references/goal-parity-design.md`。
+> 例：一个存储密集型 workflow 原本用一串节点操作外部表格（读写/建表/格式化/取元数据），目标对等重写时可收敛成少数几个本地文件操作——业务目标是"存取数据"，用更简单方式等价达成。详见 `references/goal-parity-design.md`。
 
 ## 2. 能力分级
 

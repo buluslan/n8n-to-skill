@@ -18,7 +18,7 @@
 
 ## 节点行为分类详表
 
-> ⚠️ 下表【落点】列里的路径（如 `references/xxx`、`scripts/`）均指**产物 skill 的目录**（转换时按需创建），不是本 skill（n8n-to-skill）自己的目录。
+> ⚠️ 各表表头【落点】均指**产物 skill 目录**（转换时按需创建），不是本 skill（n8n-to-skill）自己的目录。
 
 ### 1_触发器
 | 典型 n8n 节点 type | 它为业务目标贡献什么 | 新 skill 中的等价实现思路 | 落点 |
@@ -30,9 +30,9 @@
 |---|---|---|---|
 | `@n8n/n8n-nodes-langchain.*` / googleGenerativeAI / openAi / agent | 产出内容或决策的核心能力（分类、生成、总结、判断） | 用 Claude/Codex 原生能力顶替。提示词从原节点参数提取，重写成 skill 的指令或独立 prompt 文件 | `references/prompts/` + SKILL 正文「能力定义」段 |
 
-**案例（评论 workflow 的 2 个生成式 AI 节点）**：
-- Gemini 打标节点（给每条评论打标签）：贡献=分类决策能力 → skill 等价实现=写一个评论打标 prompt 文件，让 Claude 在循环中逐条调用
-- Gemini 洞察节点（生成洞察报告）：贡献=长文本生成能力 → skill 等价实现=写一个洞察生成 prompt 文件，喂入标签统计结果
+**示例（以评论 workflow 为例）**：
+- 分类/打标节点（例如评论分析的 Gemini 打标）：贡献=分类决策能力 → skill 等价实现=写一个分类 prompt 文件，让 Claude 在循环中逐条调用
+- 长文本生成节点（例如评论分析的 Gemini 洞察）：贡献=长文本生成能力 → skill 等价实现=写一个生成 prompt 文件，喂入上游统计结果
 
 ### 3_爬虫 HTTP 无认证
 | 典型 n8n 节点 type | 它为业务目标贡献什么 | 新 skill 中的等价实现思路 | 落点 |
@@ -49,25 +49,24 @@
 |---|---|---|---|
 | googleSheets / notion / gmail / slack / httpRequest（调 googleapis / notion / gmail / slack API） | 持久化、协作、通知 | 本地化（写文件）或保留集成（MCP / skill），由用户决定 | `references/integration-notes.md`（记录用户决策）+ SKILL 正文「集成」段 |
 
-**案例（评论 workflow 的 8 个存储协作节点 = 4 个 googleSheets + 4 个 httpRequest 调 Google Sheets/Drive API）**：
-- 读评论表 / 读取所有已打标数据 / 写标签表 / 写洞察表（4 个 googleSheets）：贡献=数据持久化 → 本地化等价=读 CSV / 写 CSV / 生成报告文件
-- 取表格元数据 / 初始化标签列头 / 创建洞察报告表 / 扩展列宽至 30 列（4 个 httpRequest 调 Sheets/Drive API）：贡献=Sheets 表结构管理（平台特有概念）→ 本地文件无此概念，目标对等直接消化掉，新 skill 不需要任何对应实现
+**示例（以评论 workflow 为例）**：
+- 数据持久化节点（例如评论分析的 4 个 googleSheets 读写）：贡献=读写业务数据 → 本地化等价=读 CSV / 写 CSV / 生成报告文件
+- 平台特有的表结构/格式管理（如调整列宽、初始化表头）：贡献=Sheets 平台特有概念 → 本地文件无此概念，目标对等直接消化掉，新 skill 不需要任何对应实现
 
 ### 6_数据转换
 | 典型 n8n 节点 type | 它为业务目标贡献什么 | 新 skill 中的等价实现思路 | 落点 |
 |---|---|---|---|
-| code (JS/Python) / set / editFields / aggregate / splitOut | 数据清洗、字段映射、聚合、拆分、格式转换 | 抓业务意图，用 Python 脚本重写。原 code 的业务意图 > 具体语法 | `scripts/` + `references/logic-notes.md`（记录每段转换的真实意图） |
+| code (JS/Python) / set / editFields / aggregate / splitOut | 数据清洗、字段映射、聚合、拆分、格式转换 | 抓业务意图，用 Python 脚本重写；原 code 的业务意图 > 具体语法；剥离 n8n item 私有结构（`json`/`binary`/`pairedItem`），只实现真正的数据变换 | `scripts/` + `references/logic-notes.md`（记录每段转换的真实意图） |
 
-**案例（评论 workflow 的 6 个数据转换节点：5 code + 1 set）**：
-- 不需要逐字翻译每个 code 节点。读懂每段在做什么转换（例如「把 Gemini 输出的 JSON 解析成表行」），在 `scripts/` 用 Python 实现等价逻辑
-- 关键是抓「业务意图」：原 code 可能处理 n8n item 结构（`json` / `binary` / `pairedItem`），新 skill 完全不需要这些 n8n 私有概念，只实现真正的数据变换
+**示例（以评论 workflow 为例）**：
+- 不需要逐字翻译每个 code 节点。读懂每段在做什么转换（例如「把 LLM 输出的 JSON 解析成表行」），在 `scripts/` 用 Python 实现等价逻辑
 
 ### 7_控制流
 | 典型 n8n 节点 type | 它为业务目标贡献什么 | 新 skill 中的等价实现思路 | 落点 |
 |---|---|---|---|
 | splitInBatches / if / merge / loop / switch | 批处理、分支、合并、循环 | 用 Python 脚本的 for/if 实现，或用 skill 工作流的多步骤表达。splitInBatches → `for chunk in batches` | `scripts/` + SKILL 正文「流程」段 |
 
-**案例（评论 workflow 的 1 个 splitInBatches 节点）**：贡献=循环逐条处理 → skill 等价实现=Python 脚本的 for 循环，每条评论调用一次 Claude 打标。
+**示例（以评论 workflow 为例）**：贡献=循环逐批处理 → skill 等价实现=Python 脚本的 for 循环，逐条处理每条数据。
 
 ### 8_人工审批
 | 典型 n8n 节点 type | 它为业务目标贡献什么 | 新 skill 中的等价实现思路 | 落点 |
@@ -110,7 +109,7 @@
 
 这是目标贡献分析最重要的产出。机械逐节点翻译会得到 N 个段落的臃肿 skill；目标贡献分析能识别「这 N 个节点其实在贡献同一个能力」，从而收敛成 M 个能力（M 通常远小于 N）。
 
-最典型的例子：评论 workflow 的 8 个存储协作节点（4 googleSheets + 4 httpRequest），业务目标上只是「读评论 + 写结果」一个能力，新 skill 用 2-3 个文件操作就等价实现。
+最典型的例子：存储协作类节点往往 N 个收敛成 1 个能力（例如评论分析的多个 googleSheets/httpRequest 节点 → 业务目标只是「读数据 + 写结果」→ 新 skill 用 2-3 个文件操作等价实现）。
 
 收敛原则：
 - 同类贡献（都是数据读取、都是数据写入、都是 AI 决策）合并成一个能力

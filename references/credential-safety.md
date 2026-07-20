@@ -38,6 +38,8 @@ skill 代码库默认可公开、可 git push、可交付第三方。**任何文
 
 ### 模板
 
+以下以 amazon-review-analyzer 为例（节点名为示例，实际取自原 workflow）：
+
 ```dotenv
 # 来源节点: googleGemini (节点名 "Gemini 打标")
 # 用途: 调 Gemini 给评论打标签
@@ -63,6 +65,7 @@ GOOGLE_SHEETS_OAUTH_TOKEN=
 ```python
 import os
 
+# 示例变量名，实际取自 .env.example
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("缺少 GEMINI_API_KEY，请复制 .env.example 为 .env 并填值")
@@ -110,7 +113,7 @@ with open(CRED_PATH) as f:
 | `httpBasicAuth` | env: `BASIC_USER` / `BASIC_PASS` |
 | `httpHeaderAuth` | env: `HEADER_NAME` / `HEADER_VALUE` |
 | `oAuth2Api` | env: `OAUTH_TOKEN`；需要 refresh 流程则走凭证文件路径 |
-| `googleSheetsOAuth2Api` | 见第六节「目标对等消化」 |
+| `googleSheetsOAuth2Api` | 见第六节（目标对等重写的附带价值） |
 | `googleGeminiApi` | env: `GEMINI_API_KEY`，或目标对等重写后无需（见第六节）；老 workflow 可能用 `googlePalmApi`（PaLM 2），按 `googleGeminiApi` 处理 |
 
 ### 示例与文档中的占位
@@ -162,21 +165,6 @@ def fetch_product(asin: str):
 
 **目标对等重写经常让原 workflow 的凭证整体消失**。这是 skill 化最显著的安全收益，每次转换时主动核查并利用。
 
-### 评论分析案例：两个凭证整体消化
-
-原 workflow（18 节点）依赖两个凭证：
-
-| 凭证 | 原用途 | 目标对等重写后 |
-|---|---|---|
-| `googleGeminiApi`（Gemini；老 workflow 可能标为 `googlePalmApi`） | 2 个生成式 AI 节点：评论打标 + 生成洞察 | skill 直接调用 Claude（skill 运行环境自带 Claude 凭证，用户无需额外配置） |
-| `googleSheetsOAuth2Api` | 8 个 Sheets 节点：读写表、调 Sheets API 扩列宽 | skill 改用本地 CSV（读 CSV / 写 CSV / 生成报告 CSV），无表结构、无 OAuth |
-
-### 消除的根因
-
-- **生成式 AI 类**：n8n 调 Gemini 需用户自备 key；skill 跑在 Claude Code 里，LLM 能力直接由 skill 调用 Claude 提供，外部 LLM key 失去存在理由
-- **存储协作类**：n8n 的 Sheets / Airtable / Notion 节点都需要 OAuth；目标对等重写把"协作存储"消化成"本地文件"，存储凭证随之消失
-- **表结构管理类**：评论分析案例中「取表格元数据 / 提取 SheetId / 扩展列宽至 30 列」3 个节点纯粹是 Sheets 表结构维护，本地文件无此概念，凭证无用武之地
-
 ### 转换时的核查动作
 
 在 IR（中间表示）阶段对每个原 credential 做一次判定：
@@ -185,6 +173,15 @@ def fetch_product(asin: str):
 2. 若不再需要 → IR 中标注「凭证已消化」，`.env.example` 不生成对应条目
 3. 若仍需要 → 走第二到第五节的 env 规范正常保留
 4. 判定结论与理由记录在 IR 的「凭证决策」节
+
+### 两类常见可消化凭证
+
+- **生成式 AI 类**：n8n 调外部 LLM（如 Gemini）需用户自备 key；skill 跑在 Claude Code 里，LLM 能力直接由 skill 调用 Claude 提供，外部 LLM key 失去存在理由
+- **存储协作类**：n8n 的 Sheets / Airtable / Notion 节点都需要 OAuth；目标对等重写把"协作存储"消化成"本地文件"，存储凭证随之消失；原 workflow 中维护外部表结构的节点（如表元数据查询 / 字段调整 / 列宽扩展）在本地文件模型下也无用武之地
+
+### 示例：amazon-review-analyzer
+
+原 workflow 依赖两个凭证（`googleGeminiApi` + `googleSheetsOAuth2Api`），目标对等重写后全部消化：生成式 AI 类由 skill 调用 Claude 顶替，存储协作类改用本地 CSV。完整推演见 `examples/example-output/amazon-review-analyzer/CASE_STUDY.md`。
 
 ### 例外：用户明确要求保留集成
 
